@@ -7,7 +7,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useAuth0 } from "@auth0/auth0-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function App() {
   
@@ -21,27 +21,30 @@ export default function App() {
 
   // ---------------- SAFE FETCH ----------------
   useEffect(() => {
-    async function fetchEntries() {
-      try {
-        console.log("API_URL:", API_URL);
+  async function fetchEntries() {
+    try {
+      console.log("API_URL:", API_URL);
 
-        const res = await fetch(`${API_URL}/api/all`);
-        const raw = await res.json();
+      const res = await fetch(`${API_URL}/api/all`);
 
-        console.log("API response:", raw);
+      // safer parse
+      const raw = await res.json();
+      console.log("API response:", raw);
 
-        const list = Array.isArray(raw) ? raw : raw.entries;
+      // ALWAYS expect { entries: [...] }
+      const list = raw?.entries ?? [];
 
-        setEntries(Array.isArray(list) ? list : []);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoadingData(false);
-      }
+      setEntries(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setEntries([]); // fail-safe so UI doesn't break
+    } finally {
+      setLoadingData(false);
     }
+  }
 
-    fetchEntries();
-  }, []);
+  fetchEntries();
+}, []);
 
   if (isLoading) return <div>Loading...</div>;
   
