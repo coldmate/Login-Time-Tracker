@@ -1,0 +1,10 @@
+# Ignore env files (VERY IMPORTANT)
+.env
+server/.env
+client/.env
+
+# Node modules (backend)
+server/node_modules
+
+# Optional extras
+.DS_Store
