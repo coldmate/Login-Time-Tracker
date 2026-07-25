@@ -209,6 +209,7 @@ export default function App() {
     setEntries(Array.isArray(data.entries) ? data.entries : []);
   };
 
+  // ---------------- ADMIN CLICK ----------------
   const handleAdminClick = async (date) => {
     if (date !== today) return;
 
@@ -229,6 +230,12 @@ export default function App() {
     const res = await fetch(`${API_URL}/api/all`);
     const data = await res.json();
     setEntries(Array.isArray(data.entries) ? data.entries : []);
+    // Auto sign out after logging today's time
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
   };
 
   // ---------------- CALENDAR ----------------
