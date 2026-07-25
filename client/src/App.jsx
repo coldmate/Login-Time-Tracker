@@ -6,8 +6,149 @@ import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useAuth0 } from "@auth0/auth0-react";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// A distinct color per month (feel free to swap these out)
+const MONTH_COLORS = [
+  "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
+  "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe",
+  "#008080", "#e6beff",
+];
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// ---------------- SCATTER PLOT ----------------
+function timeToMinutes(t) {
+// "10:30 AM" -> 630
+  const [time, modifier] = t.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+function minutesToLabel(mins) {
+  // 630 -> "10:30 AM"
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const period = h >= 12 ? "PM" : "AM";
+  const displayH = h % 12 === 0 ? 12 : h % 12;
+  return `${displayH}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function getDayIndex(dateStr) {
+  return new Date(dateStr + "T00:00:00").getDay(); // 0 = Sun ... 6 = Sat
+}
+
+function LoginTimeScatter({ data }) {
+  // Determine the Y-axis range based on data, with a fallback
+  const FALLBACK_START = 6;
+  const FALLBACK_END = 22;
+
+  let startHour = FALLBACK_START;
+  let endHour = FALLBACK_END;
+
+  if (data.length > 0) {
+    const allMinutes = data.map((d) => d.minutes);
+    const dataMinHour = Math.floor(Math.min(...allMinutes) / 60);
+    const dataMaxHour = Math.ceil(Math.max(...allMinutes) / 60);
+    startHour = Math.min(FALLBACK_START, dataMinHour);
+    endHour = Math.max(FALLBACK_END, dataMaxHour);
+  }
+
+  const hourTicks = [];
+  for (let h = startHour; h <= endHour; h++) {
+    hourTicks.push(h * 60);
+  }
+
+  // Group data points by month (0-11)
+  const byMonth = {};
+  data.forEach((point) => {
+    const month = new Date(point.date + "T00:00:00").getMonth();
+    if (!byMonth[month]) byMonth[month] = [];
+    byMonth[month].push(point);
+  });
+
+  const monthKeys = Object.keys(byMonth)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  return (
+    <div style={{ width: "100%", height: 550, marginBottom: 40 }}>
+      <ResponsiveContainer>
+        <ScatterChart margin={{ top: 20, right: 40, bottom: 30, left: 50 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            type="number"
+            dataKey="day"
+            domain={[-0.5, 6.5]}
+            ticks={[0, 1, 2, 3, 4, 5, 6]}
+            tickFormatter={(i) =>
+              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]
+            }
+            tick={{ fontSize: 14 }}
+            height={50}
+          />
+          <YAxis
+            type="number"
+            dataKey="minutes"
+            domain={[startHour * 60 - 15, endHour * 60 + 15]}
+            reversed
+            ticks={hourTicks}
+            tickFormatter={minutesToLabel}
+            tick={{ fontSize: 14 }}
+            width={80}
+            interval={0}
+          />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload || !payload.length) return null;
+              const point = payload[0].payload;
+              return (
+                <div
+                  style={{
+                    background: "white",
+                    border: "1px solid #ccc",
+                    borderRadius: 6,
+                    padding: "8px 12px",
+                    fontSize: 14,
+                  }}
+                >
+                  <div>date: {point.date}</div>
+                  <div>time: {minutesToLabel(point.minutes)}</div>
+                </div>
+              );
+            }}
+          />
+          <Legend />
+          {monthKeys.map((monthIndex) => (
+            <Scatter
+              key={monthIndex}
+              name={MONTH_NAMES[monthIndex]}
+              data={byMonth[monthIndex]}
+              fill={MONTH_COLORS[monthIndex]}
+              r={7}
+            />
+          ))}
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export default function App() {
   
@@ -45,6 +186,14 @@ export default function App() {
 
   fetchEntries();
 }, []);
+
+  const scatterData = (Array.isArray(entries) ? entries : [])
+    .filter((e) => e?.date && e?.time)
+    .map((e) => ({
+      day: getDayIndex(e.date),
+      minutes: timeToMinutes(e.time),
+      date: e.date,
+    }));
 
   if (isLoading) return <div>Loading...</div>;
   
@@ -178,7 +327,7 @@ export default function App() {
         </button>
       )}
 
-
+      
       {/* WEEKDAY HEADER */}
       <div
         style={{
@@ -198,6 +347,11 @@ export default function App() {
       {/* CALENDAR GRID */}
       {renderCalendar()}
 
+      {/* SCATTER CHART */}
+      <div style={{ marginTop: 20, padding: 10 }}>
+        <LoginTimeScatter data={scatterData} />
+      </div>
+
       {/* POPUP */}
       {selectedEntry && (
         <div style={{ marginTop: 20, border: "1px solid black", padding: 10 }}>
@@ -206,8 +360,6 @@ export default function App() {
           <button onClick={() => setSelectedEntry(null)}>Close</button>
         </div>
       )}
-
-      
 
       {/* TEMP DELETE BUTTON (for testing only, not in final UI) */}
       {/* {isAuthenticated && (
