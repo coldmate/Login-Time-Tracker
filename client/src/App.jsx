@@ -88,64 +88,94 @@ function LoginTimeScatter({ data }) {
     .sort((a, b) => a - b);
 
   return (
-    <div style={{ width: "100%", height: 550, marginBottom: 40 }}>
-      <ResponsiveContainer>
-        <ScatterChart margin={{ top: 20, right: 40, bottom: 30, left: 50 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            type="number"
-            dataKey="day"
-            domain={[-0.5, 6.5]}
-            ticks={[0, 1, 2, 3, 4, 5, 6]}
-            tickFormatter={(i) =>
-              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]
-            }
-            tick={{ fontSize: 14 }}
-            height={50}
-          />
-          <YAxis
-            type="number"
-            dataKey="minutes"
-            domain={[startHour * 60 - 15, endHour * 60 + 15]}
-            reversed
-            ticks={hourTicks}
-            tickFormatter={minutesToLabel}
-            tick={{ fontSize: 14 }}
-            width={80}
-            interval={0}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload || !payload.length) return null;
-              const point = payload[0].payload;
-              return (
-                <div
-                  style={{
-                    background: "white",
-                    border: "1px solid #ccc",
-                    borderRadius: 6,
-                    padding: "8px 12px",
-                    fontSize: 14,
-                  }}
-                >
-                  <div>date: {point.date}</div>
-                  <div>time: {minutesToLabel(point.minutes)}</div>
-                </div>
-              );
-            }}
-          />
-          <Legend />
-          {monthKeys.map((monthIndex) => (
-            <Scatter
-              key={monthIndex}
-              name={MONTH_NAMES[monthIndex]}
-              data={byMonth[monthIndex]}
-              fill={MONTH_COLORS[monthIndex]}
-              r={7}
+    <div style={{ width: "100%", maxWidth: 900, marginBottom: 40 }}>
+      <div style={{ height: 550 }}>
+        <ResponsiveContainer>
+          <ScatterChart margin={{ top: 20, right: 40, bottom: 30, left: 50 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              type="number"
+              dataKey="day"
+              domain={[-0.5, 6.5]}
+              ticks={[0, 1, 2, 3, 4, 5, 6]}
+              tickFormatter={(i) =>
+                ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]
+              }
+              tick={{ fontSize: 14 }}
+              height={50}
             />
-          ))}
-        </ScatterChart>
-      </ResponsiveContainer>
+            <YAxis
+              type="number"
+              dataKey="minutes"
+              domain={[startHour * 60 - 15, endHour * 60 + 15]}
+              reversed
+              ticks={hourTicks}
+              tickFormatter={minutesToLabel}
+              tick={{ fontSize: 14 }}
+              width={80}
+              interval={0}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (!active || !payload || !payload.length) return null;
+                const point = payload[0].payload;
+                return (
+                  <div
+                    style={{
+                      background: "white",
+                      border: "1px solid #ccc",
+                      borderRadius: 6,
+                      padding: "8px 12px",
+                      fontSize: 14,
+                    }}
+                  >
+                    <div>date: "{point.date}"</div>
+                    <div>time: "{minutesToLabel(point.minutes)}"</div>
+                  </div>
+                );
+              }}
+            />
+            {monthKeys.map((monthIndex) => (
+              <Scatter
+                key={monthIndex}
+                name={MONTH_NAMES[monthIndex]}
+                data={byMonth[monthIndex]}
+                fill={MONTH_COLORS[monthIndex]}
+                r={7}
+              />
+            ))}
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* CUSTOM LEGEND - guaranteed calendar order */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 16,
+          justifyContent: "center",
+          marginTop: 10,
+        }}
+      >
+        {monthKeys.map((monthIndex) => (
+          <div
+            key={monthIndex}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <span
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                background: MONTH_COLORS[monthIndex],
+                display: "inline-block",
+              }}
+            />
+            <span style={{ fontSize: 14 }}>{MONTH_NAMES[monthIndex]}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
